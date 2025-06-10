@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      use-cache:
+        type: boolean
+        description: Whether or not to run in a cached docker environment
+        required: false
+        default: true
+
+      outcome:
+        type: choice
+        options:
+          - pass
+          - fail
+        description: Whether the build should pass or fail
+        required: false
+        default: fail
+
+permissions:
+  checks: write
+  pull-requests: write
+  contents: write
+
+jobs:
+
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: Mahoney-github-actions/gradle-build-output/actions/prepare-docker-build@v2
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.use-cache)
+        with:
+          dockerhub_token: ${{ secrets.DOCKER_PAT }}
+
+      - run: ./build.sh ${{ inputs.outcome }}
+
+      - uses: Mahoney-github-actions/gradle-build-output@v2
+        id: upload-output
+        if: always()
